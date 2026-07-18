@@ -1,0 +1,18 @@
+{
+  "name": "Discord Webhook",
+  "request": {
+    "url": "https://discord.com/api/webhooks/...?wait=true",
+    "method": "POST",
+    "headers": {}
+  },
+  "body": {
+    "type": "multipart",
+    "fileField": "file",
+    "fields": {
+      "payload_json": "{\"username\":\"iTake\",\"avatar_url\":\"https://avatars.githubusercontent.com/u/90714930\"}"
+    }
+  },
+  "response": {
+    "linkPath": "attachments.0.url"
+  }
+}

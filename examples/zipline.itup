@@ -1,0 +1,18 @@
+{
+  "name": "Zipline",
+  "request": {
+    "url": "https://your-zipline-instance.com/api/upload",
+    "method": "POST",
+    "headers": {
+      "Authorization": "YOUR_ZIPLINE_TOKEN"
+    }
+  },
+  "body": {
+    "type": "multipart",
+    "fileField": "file",
+    "fields": {}
+  },
+  "response": {
+    "linkPath": "files.0.url"
+  }
+}
