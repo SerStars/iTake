@@ -1,0 +1,1 @@
+screenshot, screen-recording, ocr, and uploader + draw on your screenshots while taking a screenshot
