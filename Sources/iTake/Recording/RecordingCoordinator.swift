@@ -131,6 +131,7 @@ final class RecordingCoordinator: ObservableObject {
             let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
             let thumbnail = NSImage(cgImage: cgImage, size: .zero)
             CapturePreviewWindowController.shared.show(image: thumbnail, fileURL: url)
+            CaptureHistoryStore.shared.add(fileURL: url, kind: .recording)
             UploadCoordinator.shared.handleCaptureCompletion(fileURL: url)
         } catch {
             DebugLog.log("failed to generate recording thumbnail: \(error)")

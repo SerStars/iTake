@@ -50,9 +50,7 @@ extension UploadDestination {
     static func fromExternalFile(_ file: ExternalUploaderFile) -> UploadDestination {
         let id = UUID()
         let headers = file.request.headers ?? [:]
-        for (key, value) in headers {
-            KeychainHelper.setValue(value, forHeaderKey: key, destinationID: id)
-        }
+        KeychainHelper.setHeaders(headers, destinationID: id)
 
         return UploadDestination(
             id: id,
@@ -70,10 +68,7 @@ extension UploadDestination {
     /// Reconstructs the same portable JSON shape (pulling header values back out of the
     /// Keychain) so a destination can be exported/shared as a .itup file.
     func exportData() -> Data? {
-        var headers: [String: String] = [:]
-        for key in headerKeys {
-            headers[key] = KeychainHelper.value(forHeaderKey: key, destinationID: id) ?? ""
-        }
+        let headers = KeychainHelper.headers(destinationID: id, expectedKeys: headerKeys)
 
         let file = ExternalUploaderFile(
             name: name,

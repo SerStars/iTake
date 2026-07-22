@@ -60,6 +60,8 @@ final class UploadCoordinator {
                 return
             }
 
+            CaptureHistoryStore.shared.attachUploadedURL(resultURL, forFileAt: fileURL)
+
             if UploadSettings.autoCopyUploadedURL {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()

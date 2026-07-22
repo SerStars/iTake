@@ -24,7 +24,8 @@ enum UploaderFileActions {
             if promptConfirmation {
                 let alert = NSAlert()
                 alert.messageText = "Import Uploader “\(file.name)”?"
-                alert.informativeText = "Captures uploaded with this destination will be sent to:\n\(file.request.url)"
+                alert.informativeText =
+                    "Captures uploaded with this destination will be sent to:\n\(file.request.url)"
                 alert.addButton(withTitle: "Import")
                 alert.addButton(withTitle: "Cancel")
                 NSApp.activate(ignoringOtherApps: true)
@@ -33,7 +34,8 @@ enum UploaderFileActions {
 
             let destination = UploadDestination.fromExternalFile(file)
             UploadDestinationStore.shared.add(destination)
-            StatusOverlayController.shared.show(title: "Imported \"\(destination.name)\"", systemImage: "checkmark.circle.fill")
+            StatusOverlayController.shared.show(
+                title: "Imported \"\(destination.name)\"", systemImage: "checkmark.circle.fill")
         } catch {
             DebugLog.log("uploader import failed: \(error)")
             StatusOverlayController.shared.show(title: "Import Failed", systemImage: "xmark.circle")
@@ -55,7 +57,8 @@ enum UploaderFileActions {
 
         do {
             try data.write(to: url)
-            StatusOverlayController.shared.show(title: "Exported \"\(destination.name)\"", systemImage: "checkmark.circle.fill")
+            StatusOverlayController.shared.show(
+                title: "Exported \"\(destination.name)\"", systemImage: "checkmark.circle.fill")
         } catch {
             DebugLog.log("uploader export failed: \(error)")
             StatusOverlayController.shared.show(title: "Export Failed", systemImage: "xmark.circle")
@@ -63,6 +66,12 @@ enum UploaderFileActions {
     }
 
     static func presentUploadFilePanel() {
+        guard UploadDestinationStore.shared.active != nil else {
+            StatusOverlayController.shared.show(
+                title: "No Uploader Selected", systemImage: "xmark.circle")
+            return
+        }
+
         let panel = NSOpenPanel()
         panel.title = "Upload File"
         panel.allowsMultipleSelection = false

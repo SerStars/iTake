@@ -19,6 +19,13 @@ struct MenuBarContentView: View {
         .applyingShortcut(for: .captureRegion)
 
         Button {
+            captureCoordinator.captureAreaWithEditor()
+        } label: {
+            Label("Capture Region (Edit)", systemImage: "crop.rotate")
+        }
+        .applyingShortcut(for: .captureRegionEdit)
+
+        Button {
             captureCoordinator.captureFullScreen()
         } label: {
             Label("Capture Full Screen", systemImage: "display")
@@ -57,6 +64,12 @@ struct MenuBarContentView: View {
             Label("Upload File...", systemImage: "square.and.arrow.up")
         }
 
+        Menu {
+            RecentCapturesMenu()
+        } label: {
+            Label("Recent Captures", systemImage: "clock.arrow.circlepath")
+        }
+
         if !uploadDestinationStore.destinations.isEmpty {
             Picker(
                 "Active Uploader",
@@ -83,7 +96,7 @@ struct MenuBarContentView: View {
             NSApp.activate(ignoringOtherApps: true)
             openSettings()
         } label: {
-            Label("Preferences...", systemImage: "gearshape")
+            Label("Preferences", systemImage: "gearshape")
         }
         .keyboardShortcut(",", modifiers: .command)
 

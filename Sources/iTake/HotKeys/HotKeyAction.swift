@@ -2,6 +2,7 @@ import Carbon.HIToolbox
 
 enum HotKeyAction: String, CaseIterable, Identifiable {
     case captureRegion
+    case captureRegionEdit
     case captureFullScreen
     case captureWindow
     case captureText
@@ -12,6 +13,7 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .captureRegion: return "Capture Region"
+        case .captureRegionEdit: return "Capture Region (Edit)"
         case .captureFullScreen: return "Capture Full Screen"
         case .captureWindow: return "Capture Window"
         case .captureText: return "Capture Text"
@@ -22,6 +24,7 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
     private var defaultKeyCode: UInt32 {
         switch self {
         case .captureRegion: return UInt32(kVK_ANSI_2)
+        case .captureRegionEdit: return UInt32(kVK_ANSI_1)
         case .captureFullScreen: return UInt32(kVK_ANSI_3)
         case .captureWindow: return UInt32(kVK_ANSI_4)
         case .captureText: return UInt32(kVK_ANSI_5)

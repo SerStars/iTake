@@ -24,13 +24,15 @@ struct iTakeApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("iTake", systemImage: "camera.viewfinder") {
+        MenuBarExtra {
             MenuBarContentView()
                 .environmentObject(appState)
                 .environmentObject(captureCoordinator)
                 .environmentObject(recordingCoordinator)
                 .environmentObject(ocrCoordinator)
                 .environmentObject(UploadDestinationStore.shared)
+        } label: {
+            MenuBarIconView()
         }
         .menuBarExtraStyle(.menu)
 

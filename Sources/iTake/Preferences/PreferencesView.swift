@@ -12,6 +12,6 @@ struct PreferencesView: View {
             ShortcutsPreferencesView()
                 .tabItem { Label("Shortcuts", systemImage: "keyboard") }
         }
-        .frame(width: 460, height: 360)
+        .frame(width: 460, height: 480)
     }
 }

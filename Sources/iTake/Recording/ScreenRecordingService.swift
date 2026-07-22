@@ -45,6 +45,7 @@ final class ScreenRecordingService: NSObject, @unchecked Sendable {
         let filter: SCContentFilter
         let pointsWidth: Int
         let pointsHeight: Int
+        var sourceRect: CGRect?
 
         switch source.kind {
         case .display(let display):
@@ -60,6 +61,13 @@ final class ScreenRecordingService: NSObject, @unchecked Sendable {
             pointsWidth = max(1, Int(window.frame.width))
             pointsHeight = max(1, Int(window.frame.height))
             DebugLog.log("starting WINDOW recording for windowID=\(window.windowID)")
+        case .region(let display, let rect):
+            let excluded = try await Self.resolveWindows(numbers: excludingWindowNumbers)
+            filter = SCContentFilter(display: display, excludingWindows: excluded)
+            pointsWidth = max(1, Int(rect.width))
+            pointsHeight = max(1, Int(rect.height))
+            sourceRect = rect
+            DebugLog.log("starting REGION recording \(rect) on displayID=\(display.displayID)")
         }
 
         let scale = await MainActor.run { NSScreen.main?.backingScaleFactor ?? 2.0 }
@@ -69,6 +77,9 @@ final class ScreenRecordingService: NSObject, @unchecked Sendable {
         let config = SCStreamConfiguration()
         config.width = pixelWidth
         config.height = pixelHeight
+        if let sourceRect {
+            config.sourceRect = sourceRect
+        }
         config.showsCursor = true
         config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
         config.queueDepth = 6

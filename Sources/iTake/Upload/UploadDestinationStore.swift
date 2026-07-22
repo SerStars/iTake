@@ -26,10 +26,16 @@ final class UploadDestinationStore: ObservableObject {
         save()
     }
 
-    func remove(_ destination: UploadDestination) {
-        for key in destination.headerKeys {
-            KeychainHelper.deleteValue(forHeaderKey: key, destinationID: destination.id)
+    func update(_ destination: UploadDestination) {
+        guard let index = destinations.firstIndex(where: { $0.id == destination.id }) else {
+            return
         }
+        destinations[index] = destination
+        save()
+    }
+
+    func remove(_ destination: UploadDestination) {
+        KeychainHelper.deleteHeaders(destinationID: destination.id)
         destinations.removeAll { $0.id == destination.id }
         if activeDestinationID == destination.id {
             activeDestinationID = destinations.first?.id

@@ -4,7 +4,6 @@ enum UploadSettings {
     static let uploadAutomaticallyKey = "iTake.uploadAutomatically"
     static let autoCopyKey = "iTake.autoCopyUploadedURL"
 
-    /// Independent of CaptureOutputSettings.saveToDisk -- both, either, or neither can be on.
     static var uploadAutomatically: Bool {
         get { UserDefaults.standard.bool(forKey: uploadAutomaticallyKey) }
         set { UserDefaults.standard.set(newValue, forKey: uploadAutomaticallyKey) }

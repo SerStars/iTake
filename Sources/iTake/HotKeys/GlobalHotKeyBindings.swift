@@ -24,6 +24,7 @@ extension GlobalHotKeyManager {
 
         let actionHandlers: [(HotKeyAction, () -> Void)] = [
             (.captureRegion, { capture.captureArea() }),
+            (.captureRegionEdit, { capture.captureAreaWithEditor() }),
             (.captureFullScreen, { capture.captureFullScreen() }),
             (.captureWindow, { capture.captureWindow() }),
             (.captureText, { ocr.captureText() }),

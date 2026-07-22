@@ -4,6 +4,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         _ = ScreenCaptureService.ensurePermission()
+        UpdateCheckScheduler.checkIfNeeded()
     }
 
     /// Fired when a .itup file triggered in Finder.

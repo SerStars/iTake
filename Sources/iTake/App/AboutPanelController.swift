@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// A custom About window instead of NSApplication's standard about panel.
-
 @MainActor
 enum AboutPanelController {
     private static var window: NSWindow?

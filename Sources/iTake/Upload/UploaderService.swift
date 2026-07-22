@@ -22,8 +22,10 @@ enum UploaderService {
         var request = URLRequest(url: url)
         request.httpMethod = destination.httpMethod
 
+        let headers = KeychainHelper.headers(
+            destinationID: destination.id, expectedKeys: destination.headerKeys)
         for key in destination.headerKeys {
-            if let value = KeychainHelper.value(forHeaderKey: key, destinationID: destination.id) {
+            if let value = headers[key] {
                 request.setValue(value, forHTTPHeaderField: key)
             }
         }

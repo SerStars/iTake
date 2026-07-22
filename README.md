@@ -1,78 +1,82 @@
 # iTake
 
-A fully native macOS menu bar utility for screenshots, screen recording, OCR, and uploads, built in Swift.
+A native macOS menu bar app for screenshots, screen recording, OCR, annotation, and uploads.
 
-Capture a region, a window, or the full screen; record your screen (with system audio); pull text out of anything on-screen with OCR; then save it, copy it, or ship it straight to an HTTP endpoint of your choosing. No Dock icon, no third-party frameworks — just `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, and `Vision`.
+Capture a region, window, or the full screen; mark it up with arrows, shapes, text, and blur; record your screen with system audio; pull text off anything on-screen with OCR; then save, copy, or upload it to an HTTP endpoint of your choosing. No Dock icon, no third-party frameworks, just `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, `Vision`, and `CoreImage`.
+
+## Showcase
+
+| Menu Bar | Annotation Editor | Recent Captures |
+| --- | --- | --- |
+| ![Menu Bar](preview/iTake-MenuBar.png) | ![Annotation Editor](preview/iTake-ScreenshotEditor.png) | ![Recent Captures](preview/iTake-HistoryWindow.png) |
+
+<details>
+<summary>Settings</summary>
+
+| General | Uploader | Shortcuts |
+| --- | --- | --- |
+| ![General](preview/iTake-SettingsGeneral.png) | ![Uploader](preview/iTake-SettingsUploader.png) | ![Shortcuts](preview/iTake-SettingsShortcuts.png) |
+
+</details>
 
 ## Features
 
-- **Screenshots** — region, window, or full screen, via the native `screencapture` picker so selection feels exactly like the system tool.
-- **Screen recording** — `ScreenCaptureKit`-based, with pause/resume (paused spans are cut out of the final file, not just frozen) and optional system audio.
-- **OCR ("Capture Text")** — select a region and get its text recognized (`Vision`) and copied to your clipboard.
-- **Configurable uploader** — define one or more HTTP destinations with your own uploader config file (`.itup`, iTake's own format, see below), or just save straight to disk. Upload progress and link-copy confirmations show as small floating overlays in the corner of your screen (not system notifications).
-- **Fully customizable global hotkeys**, with conflict detection (offers to swap if you assign a combo that's already taken) and an option to take over macOS's own `⌘⇧3`/`⌘⇧4`/`⌘⇧5` screenshot shortcuts.
-- **Menu bar only** — no Dock icon, no main window; everything lives under one menu bar icon and a Preferences window.
+- **Screenshots** — region, window, or full screen, via the native `screencapture` picker.
+- **Annotation editor** — opens after capture (optional): arrows, shapes, freehand, text, numbered step badges, highlighter, and blur. Every placed item is selectable, draggable, and deletable, with undo/redo and custom colors.
+- **Screen recording** — region, window, or full display, with pause/resume (paused spans are cut, not frozen) and optional system audio.
+- **OCR ("Capture Text")** — select a region, get its text recognized and copied to your clipboard.
+- **Recent Captures** — thumbnail history with copy/upload/reveal/delete, plus a full browsable window.
+- **Configurable uploader** — one or more HTTP destinations, built and edited right in Preferences or via your own `.itup` config file. Upload progress and confirmations show as small floating overlays.
+- **Customizable global hotkeys** — with an option to take over macOS's own `⌘⇧3`/`⌘⇧4`/`⌘⇧5` screenshot shortcuts.
+- **Menu bar only** — no Dock icon, no main window, with a choice of menu bar icons.
 
 ## Requirements
 
 - macOS 14 (Sonoma) or later
-- To build: Xcode Command Line Tools (`swiftc`, `codesign`). A full Xcode install is _not_ required, since this is a plain Swift Package.
+- To build: Xcode Command Line Tools (`swiftc`, `codesign`). A full Xcode install isn't required, this is a plain Swift Package.
 
 ## Installing
 
-Download the latest [Release](https://github.com/SerStars/iTake/releases)
-Apple will show an popup saying: "Apple could not verify iTake is free of malware." This only needs fixing once per download:
+Download the latest [Release](https://github.com/SerStars/iTake/releases). The app is not signed with a Developers Certificate, you may receive "Apple could not verify iTake is free of malware", to fix it:
 
 1. Drag `iTake.app` into `/Applications`.
-2. Right-click (or Control-click) it in Finder and choose **Open**, then confirm **Open**
-   in the dialog that appears. (Just double-clicking won't offer this option.)
-
-   Alternatively, from Terminal:
-
-   ```sh
-   xattr -cr /Applications/iTake.app
-   ```
-
-3. The first time you capture or record, macOS will ask for **Screen Recording**
-   permission (System Settings -> Privacy & Security -> Screen Recording). Grant it, you
-   may need to quit and reopen iTake afterward for it to take effect.
+2. Right-click it in Finder → **Open** → confirm **Open**. (double clicking alone won't work.) Or from Terminal: `xattr -cr /Applications/iTake.app`
+3. On first capture/recording, grant **Screen Recording** access when macOS asks (System Settings → Privacy & Security). You may need to relaunch iTake for it to take effect.
 
 ## Building & Running
 
-iTake is a Swift Package, but `swift run` isn't enough, it needs to be a real .app
-<br>Use the provided scripts instead:
+`swift run` isn't enough — menu bar behavior and TCC permissions need a real signed `.app`. Use the scripts instead:
 
 ```sh
-# Build + package + launch iTake.app
+# build + package + launch
 scripts/run.sh
 
-# Just build + package, without launching
+# just build + package
 scripts/build_app.sh
 
-# Tail iTake's own log output
-scripts/logs.sh
+# package into a distributable .dmg
+scripts/build_dmg.sh
 ```
 
 ## Default Keyboard Shortcuts
 
-All shortcuts are rebindable in **Preferences -> Shortcuts**. Out of the box, iTake uses
-its own combinations so it never collides with macOS's defaults:
+Customizable in **Preferences → Shortcuts**:
 
-| Action              | Default |
-| ------------------- | ------- |
-| Capture Region      | `⌃⌘⇧2`  |
-| Capture Full Screen | `⌃⌘⇧3`  |
-| Capture Window      | `⌃⌘⇧4`  |
-| Capture Text (OCR)  | `⌃⌘⇧5`  |
-| Toggle Recording    | `⌃⌘⇧R`  |
+| Action                 | Default |
+| ----------------------- | ------- |
+| Capture Region          | `⌃⌘⇧2`  |
+| Capture Region (Edit)   | `⌃⌘⇧1`  |
+| Capture Full Screen     | `⌃⌘⇧3`  |
+| Capture Window          | `⌃⌘⇧4`  |
+| Capture Text (OCR)      | `⌃⌘⇧5`  |
+| Toggle Recording        | `⌃⌘⇧R`  |
 
-There's also a "Use macOS Default Shortcuts" toggle in Preferences that switches
-everything to `⌘⇧3`/`⌘⇧4`/`⌘⇧5` and disables the built-in Screenshot app's response to
-those keys so iTake takes over cleanly (and can be switched back at any time).
+"Capture Region (Edit)" always opens the annotation editor regardless of the "Open Editor After Capture" setting. The "Use macOS Default Shortcuts" toggle switches to `⌘⇧3`/`⌘⇧4`/`⌘⇧5` and disables the built-in Screenshot app' response to those keys.
 
 ## The Uploader & `.itup` Files
 
-iTake uses its own small, human-readable config format, a `.itup` file is just JSON:
+Build a destination directly in **Preferences → Uploader**, or hand-write a `.itup` file (plain
+JSON, double-click to import):
 
 ```json
 {
@@ -80,41 +84,23 @@ iTake uses its own small, human-readable config format, a `.itup` file is just J
   "request": {
     "url": "https://example.com/api/upload",
     "method": "POST",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    }
+    "headers": { "Authorization": "Bearer YOUR_API_KEY" }
   },
-  "body": {
-    "type": "multipart",
-    "fileField": "file",
-    "fields": {}
-  },
-  "response": {
-    "linkPath": "url"
-  }
+  "body": { "type": "multipart", "fileField": "file", "fields": {} },
+  "response": { "linkPath": "url" }
 }
 ```
 
-- `request` — where and how the file is sent (`url`, `method`, any extra `headers`).
-- `body` — `"multipart"` (with the field name the file is attached under) or `"raw"` for a
-  raw-body `PUT`/`POST`, plus any static extra fields to send alongside it.
-- `response` — `linkPath` is a dot-path into the JSON response used to find the resulting
-  URL (e.g. `"files.0.url"` for a nested/array response).
-
-`.itup` is registered as iTake's own file type, double-clicking one anywhere in Finder
-opens iTake and prompts to import it. Any secret header values (API keys, tokens) you enter are stored in the macOS Keychain, never written into the config file itself, so it's safe to export and share an `.itup` without leaking credentials. Import, export, and remove
-uploaders from **Preferences -> Uploader**; a couple of example configs can be found in [`examples/`](examples/).
+`body.type` is `"multipart"` or `"raw"`; `response.linkPath` is a dot-path into the JSON response pointing at the resulting URL (e.g. `"files.0.url"`). Header/secret values live in the Keychain, never in the file itself, safe to export and share. Examples are in [`examples/`](examples/).
 
 ## Where Things Are Saved
 
-| What | Where                                |
-| ------------------------------------------- | ------------------------------------------- |
-| Screenshots & recordings                    | `~/Pictures/iTake` by default — changeable in **Preferences -> General**                                     |
-| Debug log                                   | `~/Library/Logs/iTake/debug.log`                                                                     |
-| Preferences & hotkey bindings               | macOS `UserDefaults`, domain `com.SerStars.iTake` (`~/Library/Preferences/com.SerStars.iTake.plist`) |
-| Uploader configs (name, URL, headers, etc.) | Same `UserDefaults` domain as above                                                                  |
-| Uploader secrets (API keys/tokens)          | macOS Keychain — never written to disk in plain text                                                 |
-| Imported/exported `.itup` files             | Wherever you choose in Finder — iTake doesn't manage a copy once imported                            |
+| What                                  | Where                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------- |
+| Screenshots & recordings               | Matches macOS's own screenshot location, or `~/Desktop`. Changeable in **Preferences → General** |
+| Recent Captures history + thumbnails   | `~/Library/Application Support/iTake/`                                 |
+| Preferences, hotkey bindings & Uploader configs          | `UserDefaults`, domain `com.SerStars.iTake`                            |
+| Uploader secrets                       | macOS Keychain                          |
 
 ## License
 

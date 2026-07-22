@@ -9,7 +9,7 @@ enum HotKeyLayoutActions {
         if useMacDefaults {
             alert.messageText = "Use macOS's Default Screenshot Shortcuts?"
             alert.informativeText = """
-                iTake will take over ⌘⇧3 (Full Screen), ⌘⇧4 (Window), and ⌘⇧5 (Capture Text), and \
+                iTake will take over ⌘⇧3/4/5 and \
                 macOS's own Screenshot app will stop responding to them. \
                 You can switch back anytime from this menu. This also \
                 resets any shortcuts you've individually customized below.

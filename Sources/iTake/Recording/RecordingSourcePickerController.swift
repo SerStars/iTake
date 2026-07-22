@@ -5,17 +5,22 @@ import SwiftUI
 @MainActor
 final class RecordingSourcePickerController {
     private var window: NSWindow?
+    private let regionOverlay = RegionSelectionOverlayController()
 
     func present(onSelect: @escaping (RecordingSource) -> Void, onCancel: @escaping () -> Void) {
         Task {
             do {
-                let sources = try await Self.loadSources()
+                let content = try await SCShareableContent.excludingDesktopWindows(
+                    true, onScreenWindowsOnly: false)
+                let sources = Self.buildSources(from: content)
                 guard !sources.isEmpty else {
                     DebugLog.log("no recordable displays or windows found")
                     onCancel()
                     return
                 }
-                self.show(sources: sources, onSelect: onSelect, onCancel: onCancel)
+                self.show(
+                    sources: sources, displays: content.displays, onSelect: onSelect,
+                    onCancel: onCancel)
             } catch {
                 DebugLog.log("failed to load recording sources: \(error)")
                 onCancel()
@@ -23,10 +28,7 @@ final class RecordingSourcePickerController {
         }
     }
 
-    private static func loadSources() async throws -> [RecordingSource] {
-        let content = try await SCShareableContent.excludingDesktopWindows(
-            true, onScreenWindowsOnly: false)
-
+    private static func buildSources(from content: SCShareableContent) -> [RecordingSource] {
         var sources: [RecordingSource] = []
 
         for (index, display) in content.displays.enumerated() {
@@ -62,7 +64,8 @@ final class RecordingSourcePickerController {
     }
 
     private func show(
-        sources: [RecordingSource], onSelect: @escaping (RecordingSource) -> Void,
+        sources: [RecordingSource], displays: [SCDisplay],
+        onSelect: @escaping (RecordingSource) -> Void,
         onCancel: @escaping () -> Void
     ) {
         let panel = NSPanel(
@@ -81,6 +84,23 @@ final class RecordingSourcePickerController {
             onSelect: { [weak self] source in
                 self?.close()
                 onSelect(source)
+            },
+            onRegion: { [weak self] in
+                self?.close()
+                self?.regionOverlay.present(displays: displays) { result in
+                    guard let (display, rect) = result else {
+                        onCancel()
+                        return
+                    }
+                    onSelect(
+                        RecordingSource(
+                            id: "region-\(display.displayID)",
+                            kind: .region(display, rect),
+                            title: "Region",
+                            subtitle: "\(Int(rect.width)) × \(Int(rect.height))",
+                            icon: nil
+                        ))
+                }
             },
             onCancel: { [weak self] in
                 self?.close()

@@ -3,6 +3,7 @@ import SwiftUI
 struct RecordingSourcePickerView: View {
     let sources: [RecordingSource]
     let onSelect: (RecordingSource) -> Void
+    let onRegion: () -> Void
     let onCancel: () -> Void
 
     @AppStorage(RecordingSettings.formatKey) private var formatRaw: String = RecordingFormat.mov
@@ -30,6 +31,17 @@ struct RecordingSourcePickerView: View {
             Toggle("Include System Audio", isOn: $includeSystemAudio)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
+
+            Button {
+                onRegion()
+            } label: {
+                Label("Record Region...", systemImage: "crop")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+
+            Divider()
 
             List(sources) { source in
                 Button {

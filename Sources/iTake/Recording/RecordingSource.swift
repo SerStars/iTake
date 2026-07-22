@@ -5,6 +5,7 @@ struct RecordingSource: Identifiable {
     enum Kind {
         case display(SCDisplay)
         case window(SCWindow)
+        case region(SCDisplay, CGRect)
     }
 
     let id: String

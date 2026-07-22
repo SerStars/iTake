@@ -26,9 +26,24 @@ enum CaptureOutputSettings {
         }
     }
 
+    static func resetSaveDirectoryToDefault() {
+        UserDefaults.standard.removeObject(forKey: saveDirectoryKey)
+    }
+
+    /// Matches wherever the system screenshot tool is configured to save
+    /// (`defaults read com.apple.screencapture location`), falling back to ~/Desktop
     private static let defaultDirectory: URL = {
-        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(
-            "Pictures/iTake", isDirectory: true)
+        let dir: URL
+        if let customPath = UserDefaults(suiteName: "com.apple.screencapture")?.string(
+            forKey: "location"),
+            !customPath.isEmpty
+        {
+            dir = URL(
+                fileURLWithPath: (customPath as NSString).expandingTildeInPath, isDirectory: true)
+        } else {
+            dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(
+                "Desktop", isDirectory: true)
+        }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }()

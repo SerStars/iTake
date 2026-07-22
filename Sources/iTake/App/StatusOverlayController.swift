@@ -7,14 +7,18 @@ final class StatusOverlayController {
     static let shared = StatusOverlayController()
 
     private static let margin: CGFloat = 12
-    private static let autoDismissDelay: UInt64 = 2_500_000_000
+    private nonisolated static let defaultAutoDismissDelay: UInt64 = 2_500_000_000
 
     private var panel: NSPanel?
     private var dismissTask: Task<Void, Never>?
 
     private init() {}
 
-    func show(title: String, systemImage: String) {
+    /// autoDismissDelay: nil means it stays up until the user dismisses it (X button or tap).
+    func show(
+        title: String, subtitle: String? = nil, systemImage: String,
+        autoDismissDelay: UInt64? = defaultAutoDismissDelay, onTap: (() -> Void)? = nil
+    ) {
         dismissTask?.cancel()
         panel?.orderOut(nil)
 
@@ -22,7 +26,12 @@ final class StatusOverlayController {
 
         let view = StatusOverlayView(
             title: title,
+            subtitle: subtitle,
             systemImage: systemImage,
+            onTap: { [weak self] in
+                onTap?()
+                self?.dismiss()
+            },
             onDismiss: { [weak self] in self?.dismiss() }
         )
         let hostingView = NSHostingView(rootView: view)
@@ -58,10 +67,12 @@ final class StatusOverlayController {
 
         panel = newPanel
 
-        dismissTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: Self.autoDismissDelay)
-            guard !Task.isCancelled else { return }
-            self?.dismiss()
+        if let autoDismissDelay {
+            dismissTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: autoDismissDelay)
+                guard !Task.isCancelled else { return }
+                self?.dismiss()
+            }
         }
     }
 
