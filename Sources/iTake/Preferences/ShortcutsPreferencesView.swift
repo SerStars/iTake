@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct ShortcutsPreferencesView: View {
     @AppStorage(HotKeyLayoutSettings.useMacDefaultShortcutsKey) private
         var useMacDefaultShortcutsStored: Bool = false

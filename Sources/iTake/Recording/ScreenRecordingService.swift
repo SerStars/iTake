@@ -362,8 +362,6 @@ extension ScreenRecordingService: SCStreamOutput {
             if input.append(retimed) {
                 lastRawPresentationTime = rawPresentationTime
             }
-        case .microphone:
-            break
         @unknown default:
             break
         }
