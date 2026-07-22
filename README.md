@@ -2,7 +2,11 @@
 
 A native macOS menu bar app for screenshots, screen recording, OCR, annotation, and uploads.
 
-Capture a region, window, or the full screen - mark it up with arrows, shapes, text, and blur - record your screen with system audio - pull text off anything on-screen with OCR; then save, copy, or upload it to an HTTP endpoint of your choosing. No Dock icon, no third-party frameworks, just `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, `Vision`, and `CoreImage`.
+- Capture a region, window, or the full screen
+- Mark up with arrows, shapes, text, and blur
+- Record your screen with system audio
+- Pull text off anything on-screen with OCR
+- Save, copy, or upload text and media to a HTTP endpoint of your choosing, with no Dock icon or third-party frameworks, using `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, `Vision`, and `CoreImage`.
 
 ## Showcase
 
@@ -21,14 +25,14 @@ Capture a region, window, or the full screen - mark it up with arrows, shapes, t
 
 ## Features
 
-- **Screenshots** — region, window, or full screen, via the native `screencapture` picker.
-- **Annotation editor** — opens after capture (optional): arrows, shapes, freehand, text, numbered step badges, highlighter, and blur. Every placed item is selectable, draggable, and deletable, with undo/redo and custom colors.
-- **Screen recording** — region, window, or full display, with pause/resume (paused spans are cut, not frozen) and optional system audio.
-- **OCR ("Capture Text")** — select a region, get its text recognized and copied to your clipboard.
-- **Recent Captures** — thumbnail history with copy/upload/reveal/delete, plus a full browsable window.
-- **Configurable uploader** — one or more HTTP destinations, built and edited right in Preferences or via your own `.itup` config file. Upload progress and confirmations show as small floating overlays.
-- **Customizable global hotkeys** — with an option to take over macOS's own `⌘⇧3`/`⌘⇧4`/`⌘⇧5` screenshot shortcuts.
-- **Menu bar only** — no Dock icon, no main window, with a choice of menu bar icons.
+- **Screenshots**: region, window, or full screen, via the native `screencapture` picker.
+- **Annotation editor**: opens after capture (optional): arrows, shapes, freehand, text, numbered step badges, highlighter, and blur. Every placed item is selectable, draggable, and deletable, with undo/redo and custom colors.
+- **Screen recording**: region, window, or full display, with pause/resume (paused spans are cut, not frozen) and optional system audio.
+- **OCR ("Capture Text")**: selct a region to capture its text and copy it to your clipboard.
+- **Recent Captures**: thumbnail history with copy/upload/reveal/delete and a full browsable window.
+- **Configurable uploader**: one or more HTTP destinations, built and edited right in Preferences or via your own `.itup` config file. Upload progress and confirmations show as small floating overlays.
+- **Customizable global hotkeys**: with an option to take over macOS's own `⌘⇧3`/`⌘⇧4`/`⌘⇧5` screenshot shortcuts.
+- **Menu bar only**: no Dock icon or main window, with a choice of menu bar icons.
 
 ## Requirements
 
@@ -49,7 +53,7 @@ Download the latest [Release](https://github.com/SerStars/iTake/releases). The a
 
 ## Building & Running
 
-`swift run` isn't enough — menu bar behavior and TCC permissions need a real signed `.app`. Use the scripts instead:
+`swift run` isn't enough : menu bar behavior and TCC permissions need a real signed `.app`. Use the scripts instead:
 
 ```sh
 # build + package + launch
