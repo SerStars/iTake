@@ -49,7 +49,7 @@ Download the latest [Release](https://github.com/SerStars/iTake/releases). The a
    - Go to **System Settings** → **Privacy & Security** → **Scroll to the Bottom** → **Click on "Open Anyway"**
    - From Terminal: `xattr -cr /Applications/iTake.app`
 3. On first capture/recording, grant **Screen Recording** access when macOS asks (System Settings → Privacy & Security). You may need to relaunch iTake for it to take effect.
-4. On first file upload to your uploader, grant Keychain access.
+4. On first file upload to your uploader, grant Keychain access by entering your password for Keychain and click on "Always Allow".
 
 ## Building & Running
 
