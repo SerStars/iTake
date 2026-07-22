@@ -9,9 +9,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="iTake"
 APP_BUNDLE="$ROOT_DIR/.build/$APP_NAME.app"
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$ROOT_DIR/packaging/Info.plist")"
-DMG_PATH="$ROOT_DIR/.build/$APP_NAME-$VERSION.dmg"
+DIST_DIR="$ROOT_DIR/dist"
+DMG_PATH="$DIST_DIR/$APP_NAME-$VERSION.dmg"
 
 "$ROOT_DIR/scripts/build_app.sh" "$CONFIG"
+mkdir -p "$DIST_DIR"
 
 if ! command -v create-dmg >/dev/null 2>&1; then
     echo "==> create-dmg not found, installing via Homebrew"

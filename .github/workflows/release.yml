@@ -27,13 +27,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iTake-dmg
-          path: .build/*.dmg
+          path: dist/*.dmg
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: .build/*.dmg
+          files: dist/*.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
