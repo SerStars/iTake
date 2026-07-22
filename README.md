@@ -40,8 +40,12 @@ Capture a region, window, or the full screen - mark it up with arrows, shapes, t
 Download the latest [Release](https://github.com/SerStars/iTake/releases). The app is not signed with a Developers Certificate, you may receive "Apple could not verify iTake is free of malware", to fix it:
 
 1. Drag `iTake.app` into `/Applications`.
-2. Right-click it in Finder → **Open** → confirm **Open**. (double clicking alone won't work.) Or from Terminal: `xattr -cr /Applications/iTake.app`
+2. Follow one of the solutions:
+   - Right-click it in Finder → **Open** → confirm **Open**. (double clicking won't work.) 
+   - Go to **System Settings** → **Privacy & Security** → **Scroll to the Bottom** → **Click on "Open Anyway"**
+   - From Terminal: `xattr -cr /Applications/iTake.app`
 3. On first capture/recording, grant **Screen Recording** access when macOS asks (System Settings → Privacy & Security). You may need to relaunch iTake for it to take effect.
+4. On first file upload to your uploader, grant Keychain access.
 
 ## Building & Running
 
