@@ -110,6 +110,8 @@ JSON, double-click to import):
 | Preferences, hotkey bindings & Uploader configs          | `UserDefaults`, domain `com.SerStars.iTake`                            |
 | Uploader secrets                       | macOS Keychain                          |
 
-## License
+## Credits
+- Neocat & Neofox snuggle emote by [Volpeon](https://volpeonk/) used as the (temp) app icon
 
+## License
 [GPL-3.0](/LICENSE)
