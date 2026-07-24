@@ -111,7 +111,7 @@ JSON, double-click to import):
 | Uploader secrets                       | macOS Keychain                          |
 
 ## Credits
-- Neocat & Neofox snuggle emote by [Volpeon](https://volpeonk/) used as the (temp) app icon
+- Neocat & Neofox snuggle emote by [Volpeon](https://volpeon.ink/) used as the (temp) app icon
 
 ## License
 [GPL-3.0](/LICENSE)
