@@ -3,7 +3,7 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 
 enum AnnotationImageEffects {
-    private static let ciContext = CIContext()
+    private nonisolated(unsafe) static let ciContext = CIContext()
 
     static func blurredImage(from image: NSImage, rect: CGRect) -> NSImage? {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {

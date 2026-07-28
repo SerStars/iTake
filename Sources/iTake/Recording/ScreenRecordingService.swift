@@ -1,7 +1,7 @@
 import AVFoundation
 import AppKit
 import CoreMedia
-import ScreenCaptureKit
+@preconcurrency import ScreenCaptureKit
 
 enum RecordingError: Error {
     case alreadyRecording
@@ -373,7 +373,7 @@ extension ScreenRecordingService: SCStreamOutput {
             if input.append(retimed) {
                 lastRawPresentationTime = rawPresentationTime
             }
-        @unknown default:
+        default:
             break
         }
     }
