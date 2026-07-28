@@ -1,6 +1,4 @@
 import AppKit
-import CoreImage
-import CoreImage.CIFilterBuiltins
 
 enum AnnotationFlattener {
     static func flatten(image: NSImage, annotations: [Annotation]) -> NSImage {
@@ -27,6 +25,18 @@ enum AnnotationFlattener {
 
     private static func flip(_ rect: CGRect, imageHeight: CGFloat) -> CGRect {
         CGRect(x: rect.minX, y: imageHeight - rect.maxY, width: rect.width, height: rect.height)
+    }
+
+    private static func strokeClosedPath(
+        _ points: [CGPoint], in context: CGContext, imageHeight: CGFloat
+    ) {
+        guard let first = points.first else { return }
+        context.move(to: flip(first, imageHeight: imageHeight))
+        for point in points.dropFirst() {
+            context.addLine(to: flip(point, imageHeight: imageHeight))
+        }
+        context.closePath()
+        context.strokePath()
     }
 
     private static func draw(
@@ -63,11 +73,41 @@ enum AnnotationFlattener {
                     y: p2.y - headLength * sin(angle + headAngle)))
             context.strokePath()
 
+        case .line(let start, let end):
+            context.move(to: flip(start, imageHeight: h))
+            context.addLine(to: flip(end, imageHeight: h))
+            context.strokePath()
+
         case .rectangle(let rect):
             context.stroke(flip(rect, imageHeight: h), width: annotation.lineWidth)
 
         case .ellipse(let rect):
             context.strokeEllipse(in: flip(rect, imageHeight: h))
+
+        case .triangle(let rect):
+            strokeClosedPath(Annotation.trianglePoints(in: rect), in: context, imageHeight: h)
+
+        case .star(let rect):
+            strokeClosedPath(Annotation.starPoints(in: rect), in: context, imageHeight: h)
+
+        case .roundedRectangle(let rect):
+            let cornerRadius = Annotation.roundedRectCornerRadius(for: rect)
+            context.addPath(
+                CGPath(
+                    roundedRect: flip(rect, imageHeight: h), cornerWidth: cornerRadius,
+                    cornerHeight: cornerRadius, transform: nil))
+            context.strokePath()
+
+        case .speechBubble(let rect):
+            let bodyRect = Annotation.speechBubbleBodyRect(for: rect)
+            let cornerRadius = Annotation.roundedRectCornerRadius(for: bodyRect)
+            context.addPath(
+                CGPath(
+                    roundedRect: flip(bodyRect, imageHeight: h), cornerWidth: cornerRadius,
+                    cornerHeight: cornerRadius, transform: nil))
+            context.strokePath()
+            strokeClosedPath(
+                Annotation.speechBubbleTailPoints(in: rect), in: context, imageHeight: h)
 
         case .freehand(let points):
             guard points.count > 1 else { return }
@@ -85,14 +125,16 @@ enum AnnotationFlattener {
             ]
             let attributed = NSAttributedString(string: string, attributes: attributes)
             NSGraphicsContext.saveGraphicsState()
-            attributed.draw(at: CGPoint(x: position.x, y: h - position.y - attributed.size().height))
+            attributed.draw(
+                at: CGPoint(x: position.x, y: h - position.y - attributed.size().height))
             NSGraphicsContext.restoreGraphicsState()
 
         case .step(let position, let number):
             let diameter = Annotation.stepDiameter(for: annotation.lineWidth)
             let center = flip(position, imageHeight: h)
             let circleRect = CGRect(
-                x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter)
+                x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter,
+                height: diameter)
             context.fillEllipse(in: circleRect)
 
             let numberAttributes: [NSAttributedString.Key: Any] = [
@@ -106,43 +148,38 @@ enum AnnotationFlattener {
                 at: CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2))
             NSGraphicsContext.restoreGraphicsState()
 
-        case .highlighter(let rect):
+        case .highlighter(let points):
+            guard points.count > 1 else { return }
             context.setAlpha(0.4)
-            context.fill(flip(rect, imageHeight: h))
+            context.setLineWidth(Annotation.brushLineWidth(for: annotation.lineWidth))
+            context.move(to: flip(points[0], imageHeight: h))
+            for point in points.dropFirst() {
+                context.addLine(to: flip(point, imageHeight: h))
+            }
+            context.strokePath()
             context.setAlpha(1)
 
-        case .blur(let rect):
-            if let blurred = blurredImage(from: sourceImage, rect: rect) {
-                blurred.draw(in: flip(rect, imageHeight: h))
+        case .blur(let points):
+            guard points.count > 1 else { return }
+            let padding = Annotation.brushLineWidth(for: annotation.lineWidth) / 2
+            let modelRect = Annotation.enclosingRect(of: points).insetBy(
+                dx: -padding, dy: -padding)
+            guard
+                let blurred = AnnotationImageEffects.blurredImage(
+                    from: sourceImage, rect: modelRect)
+            else { return }
+
+            context.saveGState()
+            let flippedPoints = points.map { flip($0, imageHeight: h) }
+            context.move(to: flippedPoints[0])
+            for point in flippedPoints.dropFirst() {
+                context.addLine(to: point)
             }
+            context.setLineWidth(Annotation.brushLineWidth(for: annotation.lineWidth))
+            context.replacePathWithStrokedPath()
+            context.clip()
+            blurred.draw(in: flip(modelRect, imageHeight: h))
+            context.restoreGState()
         }
-    }
-
-    private static func blurredImage(from image: NSImage, rect: CGRect) -> NSImage? {
-        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return nil
-        }
-        let ciImage = CIImage(cgImage: cgImage)
-
-        // CIImage's coordinate space is bottom-left-origin; rect is top-left-origin, so flip
-        // before cropping.
-        let flippedRect = CGRect(
-            x: rect.minX, y: CGFloat(cgImage.height) - rect.maxY, width: rect.width, height: rect.height
-        ).intersection(ciImage.extent)
-        guard !flippedRect.isEmpty else { return nil }
-
-        let radius = max(8, min(rect.width, rect.height) / 6)
-
-        let padded = flippedRect.insetBy(dx: -radius * 2, dy: -radius * 2).intersection(ciImage.extent)
-        let croppedForBlur = ciImage.cropped(to: padded)
-
-        let filter = CIFilter.gaussianBlur()
-        filter.inputImage = croppedForBlur
-        filter.radius = Float(radius)
-
-        guard let output = filter.outputImage else { return nil }
-        let ciContext = CIContext()
-        guard let outputCGImage = ciContext.createCGImage(output, from: flippedRect) else { return nil }
-        return NSImage(cgImage: outputCGImage, size: rect.size)
     }
 }

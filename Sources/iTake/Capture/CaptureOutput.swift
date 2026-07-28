@@ -16,9 +16,9 @@ enum CaptureOutput {
     }
 
     @MainActor
-    static func finalize(fileURL: URL) throws {
+    static func finalize(fileURL: URL, showPreview: Bool = true) async throws {
         let data = try Data(contentsOf: fileURL)
-        guard NSImage(data: data) != nil else {
+        guard let image = NSImage(data: data) else {
             throw ScreenCaptureError.encodingFailed
         }
 
@@ -26,7 +26,11 @@ enum CaptureOutput {
         pasteboard.clearContents()
         pasteboard.setData(data, forType: NSPasteboard.PasteboardType(UTType.png.identifier))
 
-        CaptureHistoryStore.shared.add(fileURL: fileURL, kind: .screenshot)
+        if showPreview {
+            CapturePreviewWindowController.shared.show(image: image, fileURL: fileURL)
+        }
+
+        await CaptureHistoryStore.shared.add(fileURL: fileURL, kind: .screenshot)
         UploadCoordinator.shared.handleCaptureCompletion(fileURL: fileURL)
     }
 }

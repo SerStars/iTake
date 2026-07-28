@@ -20,6 +20,10 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$ROOT_DIR/packaging/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 
+if [ -d "$BUILD_DIR/${APP_NAME}_${APP_NAME}.bundle" ]; then
+    cp -R "$BUILD_DIR/${APP_NAME}_${APP_NAME}.bundle" "$APP_BUNDLE/Contents/Resources/"
+fi
+
 if [ -f "$ROOT_DIR/packaging/AppIcon.icns" ]; then
     cp "$ROOT_DIR/packaging/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 else

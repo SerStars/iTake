@@ -7,7 +7,9 @@ enum ResponseLinkResolver {
 
         for component in path.components(separatedBy: ".") {
             if let index = Int(component) {
-                guard let array = current as? [Any], array.indices.contains(index) else { return nil }
+                guard let array = current as? [Any], array.indices.contains(index) else {
+                    return nil
+                }
                 current = array[index]
             } else {
                 guard let dict = current as? [String: Any] else { return nil }

@@ -2,33 +2,42 @@ import AppKit
 
 @MainActor
 enum HotKeyConflictActions {
-
-    @discardableResult
-    static func applyBinding(_ newBinding: HotKeyBinding, to action: HotKeyAction) -> Bool {
-        defer { GlobalHotKeyManager.shared.reapplyAllBindings() }
-
+    static func applyBinding(
+        _ newBinding: HotKeyBinding, to action: HotKeyAction,
+        completion: @escaping (Bool) -> Void
+    ) {
         guard
             let conflicting = HotKeyAction.allCases.first(where: {
                 $0 != action && HotKeyBindingStore.binding(for: $0) == newBinding
             })
         else {
             HotKeyBindingStore.setBinding(newBinding, for: action)
-            return true
+            GlobalHotKeyManager.shared.reapplyAllBindings()
+            completion(true)
+            return
         }
 
-        let alert = NSAlert()
-        alert.messageText = "Shortcut Already In Use"
-        alert.informativeText =
-            "\(HotKeyFormatter.string(for: newBinding)) is already assigned to \"\(conflicting.label)\". Swap the two shortcuts?"
-        alert.addButton(withTitle: "Swap")
-        alert.addButton(withTitle: "Cancel")
-        NSApp.activate(ignoringOtherApps: true)
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Shortcut Already In Use"
+            alert.informativeText =
+                "\(HotKeyFormatter.string(for: newBinding)) is already assigned to \"\(conflicting.label)\". Swap the two shortcuts?"
+            alert.addButton(withTitle: "Swap")
+            alert.addButton(withTitle: "Cancel")
+            NSApp.activate(ignoringOtherApps: true)
 
-        guard alert.runModal() == .alertFirstButtonReturn else { return false }
+            let response = alert.runModal()
+            defer { GlobalHotKeyManager.shared.reapplyAllBindings() }
 
-        let previousBinding = HotKeyBindingStore.binding(for: action)
-        HotKeyBindingStore.setBinding(newBinding, for: action)
-        HotKeyBindingStore.setBinding(previousBinding, for: conflicting)
-        return true
+            guard response == .alertFirstButtonReturn else {
+                completion(false)
+                return
+            }
+
+            let previousBinding = HotKeyBindingStore.binding(for: action)
+            HotKeyBindingStore.setBinding(newBinding, for: action)
+            HotKeyBindingStore.setBinding(previousBinding, for: conflicting)
+            completion(true)
+        }
     }
 }

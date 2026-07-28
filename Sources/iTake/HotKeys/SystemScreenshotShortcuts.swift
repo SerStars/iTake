@@ -11,8 +11,8 @@ import Foundation
 
 enum SystemScreenshotShortcuts {
     private static let relevantIDs = [28, 29, 30, 31, 184]
-    private static let domain = "com.apple.symbolichotkeys" as CFString
-    private static let key = "AppleSymbolicHotKeys" as CFString
+    private nonisolated(unsafe) static let domain = "com.apple.symbolichotkeys" as CFString
+    private nonisolated(unsafe) static let key = "AppleSymbolicHotKeys" as CFString
 
     static func setEnabled(_ enabled: Bool) {
         var hotKeys = (CFPreferencesCopyAppValue(key, domain) as? [String: Any]) ?? [:]

@@ -28,6 +28,8 @@ extension GlobalHotKeyManager {
             (.captureFullScreen, { capture.captureFullScreen() }),
             (.captureWindow, { capture.captureWindow() }),
             (.captureText, { ocr.captureText() }),
+            (.captureTextTranslate, { ocr.captureTextWithTranslation() }),
+            (.pinRegion, { PinCoordinator.shared.pinRegion() }),
             (.toggleRecording, { recording.toggleRecording() }),
         ]
 

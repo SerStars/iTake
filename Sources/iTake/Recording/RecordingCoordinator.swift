@@ -26,6 +26,7 @@ final class RecordingCoordinator: ObservableObject {
     private func start() {
         guard ScreenCaptureService.ensurePermission() else {
             DebugLog.log("Screen Recording permission not granted, aborting recording")
+            PermissionWarnings.showScreenRecordingDenied()
             return
         }
         sourcePicker.present(
@@ -62,6 +63,13 @@ final class RecordingCoordinator: ObservableObject {
             } catch {
                 DebugLog.log("failed to start recording: \(error)")
                 RecordingHUDWindowController.shared.hide()
+                StatusOverlayController.shared.show(
+                    title: "Recording Failed to Start",
+                    subtitle: "Check Screen Recording access in System Settings.",
+                    systemImage: "exclamationmark.triangle.fill",
+                    autoDismissDelay: nil,
+                    onTap: { PermissionWarnings.openScreenRecordingSettings() }
+                )
             }
         }
     }
@@ -93,7 +101,7 @@ final class RecordingCoordinator: ObservableObject {
         Task {
             do {
                 let url = try await service.stop()
-                showPreview(for: url)
+                await showPreview(for: url)
             } catch {
                 DebugLog.log("recording discarded: \(error)")
             }
@@ -122,16 +130,16 @@ final class RecordingCoordinator: ObservableObject {
         return "\(minutesText):\(secondsText)"
     }
 
-    private func showPreview(for url: URL) {
+    private func showPreview(for url: URL) async {
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
 
         do {
-            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-            let thumbnail = NSImage(cgImage: cgImage, size: .zero)
+            let result = try await generator.image(at: .zero)
+            let thumbnail = NSImage(cgImage: result.image, size: .zero)
             CapturePreviewWindowController.shared.show(image: thumbnail, fileURL: url)
-            CaptureHistoryStore.shared.add(fileURL: url, kind: .recording)
+            await CaptureHistoryStore.shared.add(fileURL: url, kind: .recording)
             UploadCoordinator.shared.handleCaptureCompletion(fileURL: url)
         } catch {
             DebugLog.log("failed to generate recording thumbnail: \(error)")

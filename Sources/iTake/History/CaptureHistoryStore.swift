@@ -25,10 +25,10 @@ final class CaptureHistoryStore: ObservableObject {
         load()
     }
 
-    func add(fileURL: URL, kind: CaptureRecord.Kind) {
+    func add(fileURL: URL, kind: CaptureRecord.Kind) async {
         let id = UUID()
         let thumbnailFileName = "\(id.uuidString).png"
-        if let thumbnail = Self.makeThumbnail(for: fileURL, kind: kind),
+        if let thumbnail = await Self.makeThumbnail(for: fileURL, kind: kind),
             let data = Self.pngData(for: thumbnail)
         {
             try? data.write(to: thumbnailsDirectory.appendingPathComponent(thumbnailFileName))
@@ -45,6 +45,12 @@ final class CaptureHistoryStore: ObservableObject {
     func attachUploadedURL(_ url: URL, forFileAt fileURL: URL) {
         guard let index = records.firstIndex(where: { $0.fileURL == fileURL }) else { return }
         records[index].uploadedURL = url
+        persist()
+    }
+
+    func updateFileURL(from oldURL: URL, to newURL: URL) {
+        guard let index = records.firstIndex(where: { $0.fileURL == oldURL }) else { return }
+        records[index].fileURL = newURL
         persist()
     }
 
@@ -89,17 +95,18 @@ final class CaptureHistoryStore: ObservableObject {
         records = decoded.filter { FileManager.default.fileExists(atPath: $0.fileURL.path) }
     }
 
-    private static func makeThumbnail(for fileURL: URL, kind: CaptureRecord.Kind) -> NSImage? {
+    private static func makeThumbnail(for fileURL: URL, kind: CaptureRecord.Kind) async -> NSImage?
+    {
         switch kind {
         case .screenshot:
             return NSImage(contentsOf: fileURL).map { resized($0, maxDimension: 160) }
         case .recording:
             let generator = AVAssetImageGenerator(asset: AVURLAsset(url: fileURL))
             generator.appliesPreferredTrackTransform = true
-            guard let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) else {
+            guard let result = try? await generator.image(at: .zero) else {
                 return nil
             }
-            return resized(NSImage(cgImage: cgImage, size: .zero), maxDimension: 160)
+            return resized(NSImage(cgImage: result.image, size: .zero), maxDimension: 160)
         }
     }
 

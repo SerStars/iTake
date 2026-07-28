@@ -7,6 +7,7 @@ struct MenuBarContentView: View {
     @EnvironmentObject private var ocrCoordinator: OCRCoordinator
     @EnvironmentObject private var uploadDestinationStore: UploadDestinationStore
     @ObservedObject private var hotKeyBindingsObserver = HotKeyBindingsObserver.shared
+    @ObservedObject private var pinCoordinator = PinCoordinator.shared
 
     @Environment(\.openSettings) private var openSettings
 
@@ -45,6 +46,28 @@ struct MenuBarContentView: View {
             Label("Capture Text", systemImage: "text.viewfinder")
         }
         .applyingShortcut(for: .captureText)
+
+        Button {
+            ocrCoordinator.captureTextWithTranslation()
+        } label: {
+            Label("Capture Text (Translate)", systemImage: "globe")
+        }
+        .applyingShortcut(for: .captureTextTranslate)
+
+        Button {
+            pinCoordinator.pinRegion()
+        } label: {
+            Label("Pin Region", systemImage: "pin")
+        }
+        .applyingShortcut(for: .pinRegion)
+
+        if !pinCoordinator.pins.isEmpty {
+            Menu {
+                PinnedCapturesMenu()
+            } label: {
+                Label("Pinned Captures", systemImage: "pin.fill")
+            }
+        }
 
         Divider()
 

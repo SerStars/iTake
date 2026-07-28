@@ -15,9 +15,12 @@ final class UploadCoordinator {
         }
         let deleteAfterUpload = !CaptureOutputSettings.saveToDisk
         Task {
-            await upload(fileURL: fileURL, to: destination)
-            if deleteAfterUpload {
+            let succeeded = await upload(fileURL: fileURL, to: destination)
+            guard deleteAfterUpload else { return }
+            if succeeded {
                 try? FileManager.default.removeItem(at: fileURL)
+            } else {
+                offerToSaveToDisk(tempFileURL: fileURL)
             }
         }
     }
@@ -32,7 +35,35 @@ final class UploadCoordinator {
         Task { await upload(fileURL: fileURL, to: destination) }
     }
 
-    private func upload(fileURL: URL, to destination: UploadDestination) async {
+    private func offerToSaveToDisk(tempFileURL: URL) {
+        let alert = NSAlert()
+        alert.messageText = "Upload Failed"
+        alert.informativeText =
+            "The upload didn't go through. Save this capture to disk instead of losing it?"
+        alert.addButton(withTitle: "Save to Disk")
+        alert.addButton(withTitle: "Discard")
+        NSApp.activate(ignoringOtherApps: true)
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            try? FileManager.default.removeItem(at: tempFileURL)
+            return
+        }
+
+        let destinationURL = CaptureOutputSettings.saveDirectory.appendingPathComponent(
+            tempFileURL.lastPathComponent)
+        do {
+            try FileManager.default.moveItem(at: tempFileURL, to: destinationURL)
+            CaptureHistoryStore.shared.updateFileURL(from: tempFileURL, to: destinationURL)
+            StatusOverlayController.shared.show(
+                title: "Saved to Disk", systemImage: "externaldrive.badge.checkmark")
+        } catch {
+            DebugLog.log("failed to save capture to disk after upload failure: \(error)")
+            StatusOverlayController.shared.show(title: "Save Failed", systemImage: "xmark.circle")
+        }
+    }
+
+    @discardableResult
+    private func upload(fileURL: URL, to destination: UploadDestination) async -> Bool {
         // Only surface the progress overlay if the upload is still running after 2 seconds
         let progressDelayTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -56,8 +87,10 @@ final class UploadCoordinator {
             guard let resultURL = result.fileURL else {
                 DebugLog.log("upload succeeded but response URL template didn't resolve")
                 StatusOverlayController.shared.show(
-                    title: "Upload Failed", systemImage: "xmark.circle")
-                return
+                    title: "Upload Failed",
+                    subtitle: "File uploaded, but couldn't find a link in the response.",
+                    systemImage: "xmark.circle")
+                return false
             }
 
             CaptureHistoryStore.shared.attachUploadedURL(resultURL, forFileAt: fileURL)
@@ -70,9 +103,11 @@ final class UploadCoordinator {
 
             StatusOverlayController.shared.show(
                 title: "Link Copied", systemImage: "link.circle.fill")
+            return true
         } catch {
             DebugLog.log("upload failed: \(error)")
             StatusOverlayController.shared.show(title: "Upload Failed", systemImage: "xmark.circle")
+            return false
         }
     }
 }

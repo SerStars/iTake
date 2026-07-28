@@ -6,10 +6,12 @@ struct AnnotationEditorView: View {
     let onCancel: () -> Void
 
     @State private var annotations: [Annotation] = []
-    @State private var redoStack: [Annotation] = []
+    @State private var undoStack: [[Annotation]] = []
+    @State private var redoStack: [[Annotation]] = []
     @State private var selectedTool: AnnotationTool = .arrow
     @State private var selectedColor: Color = .red
     @State private var lineWidth: CGFloat = 4
+    @State private var zoomLevel: CGFloat = 1
     @State private var selectedAnnotationID: UUID?
     @State private var editingAnnotationID: UUID?
 
@@ -23,7 +25,8 @@ struct AnnotationEditorView: View {
                 selectedTool: $selectedTool,
                 selectedColor: $selectedColor,
                 lineWidth: $lineWidth,
-                canUndo: !annotations.isEmpty,
+                zoomLevel: $zoomLevel,
+                canUndo: !undoStack.isEmpty,
                 canRedo: !redoStack.isEmpty,
                 onUndo: undo,
                 onRedo: redo,
@@ -39,11 +42,12 @@ struct AnnotationEditorView: View {
                 selectedTool: selectedTool,
                 selectedColor: selectedColor,
                 lineWidth: lineWidth,
+                zoomLevel: $zoomLevel,
                 selectedAnnotationID: $selectedAnnotationID,
                 editingAnnotation: editingAnnotation,
                 onAnnotationAdded: { annotation in
+                    pushUndoSnapshot()
                     annotations.append(annotation)
-                    redoStack.removeAll()
                 },
                 onAnnotationMoved: { id, delta in
                     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
@@ -51,15 +55,30 @@ struct AnnotationEditorView: View {
                 },
                 onAnnotationEdited: { id, newShape, newColor, newLineWidth in
                     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+                    pushUndoSnapshot()
                     annotations[index].shape = newShape
                     annotations[index].color = newColor
                     annotations[index].lineWidth = newLineWidth
                     editingAnnotationID = nil
-                    redoStack.removeAll()
                 },
                 onAnnotationDeleted: { id in
+                    pushUndoSnapshot()
                     annotations.removeAll { $0.id == id }
-                    redoStack.removeAll()
+                },
+                onEraseGestureBegan: {
+                    pushUndoSnapshot()
+                },
+                onAnnotationErased: { id in
+                    annotations.removeAll { $0.id == id }
+                },
+                onPathAnnotationErased: { id, newShapes in
+                    guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+                    let original = annotations[index]
+                    let replacements = newShapes.map { shape in
+                        Annotation(
+                            shape: shape, color: original.color, lineWidth: original.lineWidth)
+                    }
+                    annotations.replaceSubrange(index...index, with: replacements)
                 },
                 onTextEditRequested: { annotation in
                     editingAnnotationID = annotation.id
@@ -99,17 +118,23 @@ struct AnnotationEditorView: View {
         else { return }
         annotations[index].color = selectedColor
         annotations[index].lineWidth = lineWidth
+    }
+
+    private func pushUndoSnapshot() {
+        undoStack.append(annotations)
         redoStack.removeAll()
     }
 
     private func undo() {
-        guard let last = annotations.popLast() else { return }
-        redoStack.append(last)
+        guard let previous = undoStack.popLast() else { return }
+        redoStack.append(annotations)
+        annotations = previous
     }
 
     private func redo() {
-        guard let last = redoStack.popLast() else { return }
-        annotations.append(last)
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(annotations)
+        annotations = next
     }
 
     private func save() {

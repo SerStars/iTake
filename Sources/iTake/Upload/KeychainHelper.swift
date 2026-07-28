@@ -26,7 +26,8 @@ enum KeychainHelper {
         return result
     }
 
-    static func setHeaders(_ headers: [String: String], destinationID: UUID) {
+    @discardableResult
+    static func setHeaders(_ headers: [String: String], destinationID: UUID) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -34,11 +35,12 @@ enum KeychainHelper {
         ]
         SecItemDelete(query as CFDictionary)
 
-        guard !headers.isEmpty, let data = try? JSONEncoder().encode(headers) else { return }
+        guard !headers.isEmpty, let data = try? JSONEncoder().encode(headers) else { return true }
 
         var attributes = query
         attributes[kSecValueData as String] = data
-        SecItemAdd(attributes as CFDictionary, nil)
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        return status == errSecSuccess
     }
 
     static func deleteHeaders(destinationID: UUID) {

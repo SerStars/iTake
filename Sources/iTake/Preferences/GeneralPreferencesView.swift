@@ -6,7 +6,10 @@ struct GeneralPreferencesView: View {
     @State private var launchAtLogin: Bool = LoginItemSettings.isEnabled
     @AppStorage(MenuBarIconSettings.iconKey) private var selectedMenuBarIcon: String =
         MenuBarIconSettings.defaultIcon
-    @AppStorage(AnnotationSettings.openEditorAfterCaptureKey) private var openEditorAfterCapture = false
+    @AppStorage(AnnotationSettings.openEditorAfterCaptureKey) private var openEditorAfterCapture =
+        false
+    @AppStorage(OCRTranslationSettings.autoCopyTranslationKey) private var autoCopyTranslation =
+        false
 
     var body: some View {
         Form {
@@ -76,6 +79,12 @@ struct GeneralPreferencesView: View {
                     }
             } header: {
                 Text("Startup")
+            }
+
+            Section {
+                Toggle("Auto-Copy Translation", isOn: $autoCopyTranslation)
+            } header: {
+                Text("OCR Translation")
             }
         }
         .formStyle(.grouped)

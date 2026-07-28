@@ -49,8 +49,9 @@ struct ShortcutsPreferencesView: View {
                                 let newBinding = HotKeyBinding(
                                     keyCode: keyCode, modifiers: modifiers)
 
-                                if HotKeyConflictActions.applyBinding(newBinding, to: action) {
-                                    reloadBindings()
+                                HotKeyConflictActions.applyBinding(newBinding, to: action) {
+                                    success in
+                                    if success { reloadBindings() }
                                 }
                             }
                         )

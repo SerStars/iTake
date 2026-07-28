@@ -3,8 +3,17 @@ import AppKit
 @MainActor
 final class OCRCoordinator: ObservableObject {
     func captureText() {
+        runCapture(translate: false)
+    }
+
+    func captureTextWithTranslation() {
+        runCapture(translate: true)
+    }
+
+    private func runCapture(translate: Bool) {
         guard ScreenCaptureService.ensurePermission() else {
             DebugLog.log("Screen Recording permission not granted, aborting OCR capture")
+            PermissionWarnings.showScreenRecordingDenied()
             return
         }
 
@@ -35,8 +44,12 @@ final class OCRCoordinator: ObservableObject {
                 pasteboard.clearContents()
                 pasteboard.setString(text, forType: .string)
 
-                StatusOverlayController.shared.show(
-                    title: "Text Copied", systemImage: "checkmark.circle.fill")
+                if translate {
+                    OCRTranslationWindowController.shared.show(sourceText: text)
+                } else {
+                    StatusOverlayController.shared.show(
+                        title: "Text Copied", systemImage: "checkmark.circle.fill")
+                }
             } catch OCRServiceError.noTextFound {
                 StatusOverlayController.shared.show(
                     title: "No Text Found", systemImage: "xmark.circle")

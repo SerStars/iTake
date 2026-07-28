@@ -7,12 +7,16 @@ struct AnnotationCanvasView: View {
     let selectedTool: AnnotationTool
     let selectedColor: Color
     let lineWidth: CGFloat
+    @Binding var zoomLevel: CGFloat
     @Binding var selectedAnnotationID: UUID?
     let editingAnnotation: Annotation?
     let onAnnotationAdded: (Annotation) -> Void
     let onAnnotationMoved: (UUID, CGPoint) -> Void
     let onAnnotationEdited: (UUID, Annotation.Shape, Color, CGFloat) -> Void
     let onAnnotationDeleted: (UUID) -> Void
+    let onEraseGestureBegan: () -> Void
+    let onAnnotationErased: (UUID) -> Void
+    let onPathAnnotationErased: (UUID, [Annotation.Shape]) -> Void
     let onTextEditRequested: (Annotation) -> Void
     let onEditCancelled: () -> Void
 
@@ -28,95 +32,134 @@ struct AnnotationCanvasView: View {
     @State private var draggingAnnotationID: UUID?
     @State private var dragLastPoint: CGPoint = .zero
     @State private var wasAlreadySelected = false
+    @State private var isErasing = false
+    @State private var eraserCursorPoint: CGPoint?
+    @State private var magnifyStartZoom: CGFloat?
 
     private static let minShapeSize: CGFloat = 4
     private static let hitTestPadding: CGFloat = 6
+    private static let zoomRange: ClosedRange<CGFloat> = 0.25...4
+    private static let margin: CGFloat = 28
+
+    private var eraserRadius: CGFloat {
+        max(8, lineWidth * 2.5)
+    }
+
+    private var magnifyGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                let start = magnifyStartZoom ?? zoomLevel
+                magnifyStartZoom = start
+                zoomLevel = min(
+                    Self.zoomRange.upperBound,
+                    max(Self.zoomRange.lowerBound, start * value.magnification))
+            }
+            .onEnded { _ in
+                magnifyStartZoom = nil
+            }
+    }
 
     var body: some View {
         GeometryReader { geo in
-            let scale = min(geo.size.width / image.size.width, geo.size.height / image.size.height)
+            let availableSize = CGSize(
+                width: max(geo.size.width - Self.margin * 2, 1),
+                height: max(geo.size.height - Self.margin * 2, 1))
+            let fitScale = min(
+                availableSize.width / image.size.width, availableSize.height / image.size.height)
+            let scale = fitScale * zoomLevel
             let displaySize = CGSize(
                 width: image.size.width * scale, height: image.size.height * scale)
 
-            ZStack(alignment: .topLeading) {
-                Canvas { context, _ in
-                    context.draw(
-                        Image(nsImage: image), in: CGRect(origin: .zero, size: displaySize))
-                    for annotation in annotations {
-                        if annotation.id == editingAnnotation?.id { continue }
-                        draw(annotation, in: context, scale: scale)
-                        if annotation.id == selectedAnnotationID {
-                            drawSelectionBox(for: annotation, in: context, scale: scale)
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                ZStack(alignment: .topLeading) {
+                    Canvas { context, _ in
+                        context.draw(
+                            Image(nsImage: image), in: CGRect(origin: .zero, size: displaySize))
+                        for annotation in annotations {
+                            if annotation.id == editingAnnotation?.id { continue }
+                            draw(annotation, in: context, scale: scale)
+                            if annotation.id == selectedAnnotationID {
+                                drawSelectionBox(for: annotation, in: context, scale: scale)
+                            }
+                        }
+                        if let preview = previewAnnotation() {
+                            draw(preview, in: context, scale: scale)
+                        }
+                        if selectedTool == .eraser, let eraserCursorPoint {
+                            drawEraserCursor(at: eraserCursorPoint, in: context, scale: scale)
                         }
                     }
-                    if let preview = previewAnnotation() {
-                        draw(preview, in: context, scale: scale)
-                    }
-                }
-                .frame(width: displaySize.width, height: displaySize.height)
-                .contentShape(Rectangle())
-                .focusable()
-                .focused($isCanvasFocused)
-                .onDeleteCommand {
-                    if let selectedAnnotationID {
-                        onAnnotationDeleted(selectedAnnotationID)
-                        self.selectedAnnotationID = nil
-                    }
-                }
-                .gesture(drawGesture(scale: scale))
-
-                if let pendingTextPosition {
-                    ZStack(alignment: .topLeading) {
-                        if pendingTextString.isEmpty {
-                            Text("Type here…")
-                                .font(.system(size: 14))
-                                .foregroundColor(Color(white: 0.32))
-                                .padding(.leading, 10)
-                                .padding(.top, 8)
-                                .allowsHitTesting(false)
+                    .frame(width: displaySize.width, height: displaySize.height)
+                    .contentShape(Rectangle())
+                    .focusable()
+                    .focusEffectDisabled()
+                    .focused($isCanvasFocused)
+                    .onDeleteCommand {
+                        if let selectedAnnotationID {
+                            onAnnotationDeleted(selectedAnnotationID)
+                            self.selectedAnnotationID = nil
                         }
-                        AnnotationTextEditor(
-                            text: $pendingTextString,
-                            font: .systemFont(
-                                ofSize: Annotation.textFontSize(for: lineWidth), weight: .semibold),
-                            color: NSColor(selectedColor),
-                            onCommit: commitText,
-                            onCancel: cancelTextEditing
-                        )
                     }
-                    .frame(width: 240, height: 64)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(.regularMaterial))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8).stroke(
-                            Color.primary.opacity(0.15), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
-                    .offset(x: pendingTextPosition.x * scale, y: pendingTextPosition.y * scale)
-                }
+                    .gesture(drawGesture(scale: scale))
 
-                if let pendingStepPosition {
-                    TextField("#", text: $pendingStepNumberText)
-                        .textFieldStyle(.plain)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 14, weight: .bold))
-                        .padding(6)
+                    if let pendingTextPosition {
+                        ZStack(alignment: .topLeading) {
+                            if pendingTextString.isEmpty {
+                                Text("Type here…")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(white: 0.32))
+                                    .padding(.leading, 10)
+                                    .padding(.top, 8)
+                                    .allowsHitTesting(false)
+                            }
+                            AnnotationTextEditor(
+                                text: $pendingTextString,
+                                font: .systemFont(
+                                    ofSize: Annotation.textFontSize(for: lineWidth),
+                                    weight: .semibold),
+                                color: NSColor(selectedColor),
+                                onCommit: commitText,
+                                onCancel: cancelTextEditing
+                            )
+                        }
+                        .frame(width: 240, height: 64)
                         .background(RoundedRectangle(cornerRadius: 8).fill(.regularMaterial))
                         .overlay(
                             RoundedRectangle(cornerRadius: 8).stroke(
                                 Color.primary.opacity(0.15), lineWidth: 1)
                         )
-                        .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
-                        .frame(width: 44)
-                        .position(
-                            x: pendingStepPosition.x * scale, y: pendingStepPosition.y * scale
-                        )
-                        .focused($isStepFieldFocused)
-                        .onAppear { isStepFieldFocused = true }
-                        .onSubmit { commitStep() }
-                        .onExitCommand { self.pendingStepPosition = nil }
+                        .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
+                        .offset(x: pendingTextPosition.x * scale, y: pendingTextPosition.y * scale)
+                    }
+
+                    if let pendingStepPosition {
+                        TextField("#", text: $pendingStepNumberText)
+                            .textFieldStyle(.plain)
+                            .multilineTextAlignment(.center)
+                            .font(.system(size: 14, weight: .bold))
+                            .padding(6)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(.regularMaterial))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8).stroke(
+                                    Color.primary.opacity(0.15), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
+                            .frame(width: 44)
+                            .position(
+                                x: pendingStepPosition.x * scale, y: pendingStepPosition.y * scale
+                            )
+                            .focused($isStepFieldFocused)
+                            .onAppear { isStepFieldFocused = true }
+                            .onSubmit { commitStep() }
+                            .onExitCommand { self.pendingStepPosition = nil }
+                    }
                 }
+                .frame(
+                    width: max(displaySize.width + Self.margin * 2, geo.size.width),
+                    height: max(displaySize.height + Self.margin * 2, geo.size.height)
+                )
             }
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+            .simultaneousGesture(magnifyGesture)
             .onAppear { syncEditingState() }
             .onChange(of: editingAnnotation?.id) { _, _ in syncEditingState() }
         }
@@ -133,6 +176,17 @@ struct AnnotationCanvasView: View {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
                 let point = CGPoint(x: value.location.x / scale, y: value.location.y / scale)
+
+                if selectedTool == .eraser {
+                    isCanvasFocused = true
+                    if !isErasing {
+                        isErasing = true
+                        onEraseGestureBegan()
+                    }
+                    eraserCursorPoint = point
+                    applyErase(at: point)
+                    return
+                }
 
                 if dragStart == nil, draggingAnnotationID == nil, freehandPoints.isEmpty {
                     isCanvasFocused = true
@@ -152,7 +206,9 @@ struct AnnotationCanvasView: View {
                     return
                 }
 
-                if selectedTool == .freehand {
+                if selectedTool == .freehand || selectedTool == .highlighter
+                    || selectedTool == .blur
+                {
                     if dragStart == nil {
                         dragStart = point
                         freehandPoints = [point]
@@ -169,7 +225,11 @@ struct AnnotationCanvasView: View {
                     dragStart = nil
                     dragCurrent = nil
                     freehandPoints = []
+                    isErasing = false
+                    eraserCursorPoint = nil
                 }
+
+                if selectedTool == .eraser { return }
 
                 if let draggingAnnotationID {
                     let moved = hypot(value.translation.width, value.translation.height) > 3
@@ -194,12 +254,21 @@ struct AnnotationCanvasView: View {
         for annotation in annotations.reversed() {
             let padding = Self.hitTestPadding + annotation.lineWidth / 2
             switch annotation.shape {
-            case .arrow(let start, let end):
+            case .arrow(let start, let end), .line(let start, let end):
                 if distanceToSegment(point, start, end) <= padding { return annotation }
             case .freehand(let points):
                 guard points.count > 1 else { continue }
                 for i in 0..<(points.count - 1) {
                     if distanceToSegment(point, points[i], points[i + 1]) <= padding {
+                        return annotation
+                    }
+                }
+            case .highlighter(let points), .blur(let points):
+                guard points.count > 1 else { continue }
+                let brushPadding =
+                    Self.hitTestPadding + Annotation.brushLineWidth(for: annotation.lineWidth) / 2
+                for i in 0..<(points.count - 1) {
+                    if distanceToSegment(point, points[i], points[i + 1]) <= brushPadding {
                         return annotation
                     }
                 }
@@ -235,39 +304,109 @@ struct AnnotationCanvasView: View {
             pendingStepPosition = endPoint
             pendingStepNumberText = "\(nextStepNumber)"
 
-        case .freehand:
+        case .freehand, .highlighter, .blur:
             guard freehandPoints.count > 1 else { return }
             onAnnotationAdded(
                 Annotation(
-                    shape: .freehand(points: freehandPoints), color: selectedColor,
-                    lineWidth: lineWidth))
+                    shape: pathAnnotationShape(for: selectedTool, points: freehandPoints),
+                    color: selectedColor, lineWidth: lineWidth))
 
-        case .arrow:
+        case .eraser:
+            return
+
+        case .arrow, .line:
             guard let start = dragStart, distance(start, endPoint) > Self.minShapeSize else {
                 return
             }
-            onAnnotationAdded(
-                Annotation(
-                    shape: .arrow(start: start, end: endPoint), color: selectedColor,
-                    lineWidth: lineWidth))
-
-        case .rectangle, .highlighter, .blur:
-            guard let start = dragStart else { return }
-            let rect = rect(from: start, to: endPoint)
-            guard rect.width > Self.minShapeSize, rect.height > Self.minShapeSize else { return }
             let shape: Annotation.Shape =
-                selectedTool == .rectangle
-                ? .rectangle(rect: rect)
-                : (selectedTool == .highlighter ? .highlighter(rect: rect) : .blur(rect: rect))
+                selectedTool == .arrow
+                ? .arrow(start: start, end: endPoint) : .line(start: start, end: endPoint)
             onAnnotationAdded(Annotation(shape: shape, color: selectedColor, lineWidth: lineWidth))
 
-        case .ellipse:
+        case .rectangle, .ellipse, .triangle, .star, .roundedRectangle, .speechBubble:
             guard let start = dragStart else { return }
             let rect = rect(from: start, to: endPoint)
             guard rect.width > Self.minShapeSize, rect.height > Self.minShapeSize else { return }
-            onAnnotationAdded(
-                Annotation(shape: .ellipse(rect: rect), color: selectedColor, lineWidth: lineWidth))
+            guard let shape = rectAnnotationShape(for: selectedTool, rect: rect) else { return }
+            onAnnotationAdded(Annotation(shape: shape, color: selectedColor, lineWidth: lineWidth))
         }
+    }
+
+    private func rectAnnotationShape(for tool: AnnotationTool, rect: CGRect) -> Annotation.Shape? {
+        switch tool {
+        case .rectangle: return .rectangle(rect: rect)
+        case .ellipse: return .ellipse(rect: rect)
+        case .triangle: return .triangle(rect: rect)
+        case .star: return .star(rect: rect)
+        case .roundedRectangle: return .roundedRectangle(rect: rect)
+        case .speechBubble: return .speechBubble(rect: rect)
+        default: return nil
+        }
+    }
+
+    private func pathAnnotationShape(for tool: AnnotationTool, points: [CGPoint])
+        -> Annotation.Shape
+    {
+        switch tool {
+        case .highlighter: return .highlighter(points: points)
+        case .blur: return .blur(points: points)
+        default: return .freehand(points: points)
+        }
+    }
+
+    private func pathAnnotationShape(matching shape: Annotation.Shape, points: [CGPoint])
+        -> Annotation.Shape
+    {
+        switch shape {
+        case .highlighter: return .highlighter(points: points)
+        case .blur: return .blur(points: points)
+        default: return .freehand(points: points)
+        }
+    }
+
+    private func applyErase(at point: CGPoint) {
+        let radius = eraserRadius
+        for annotation in annotations {
+            switch annotation.shape {
+            case .freehand(let points), .highlighter(let points), .blur(let points):
+                guard points.contains(where: { distance($0, point) <= radius }) else { continue }
+                let runs = splitPoints(points, erasingAt: point, radius: radius)
+                let newShapes = runs.map {
+                    pathAnnotationShape(matching: annotation.shape, points: $0)
+                }
+                onPathAnnotationErased(annotation.id, newShapes)
+            default:
+                if eraserHits(annotation, at: point, radius: radius) {
+                    onAnnotationErased(annotation.id)
+                }
+            }
+        }
+    }
+
+    private func eraserHits(_ annotation: Annotation, at point: CGPoint, radius: CGFloat) -> Bool {
+        switch annotation.shape {
+        case .arrow(let start, let end), .line(let start, let end):
+            return distanceToSegment(point, start, end) <= radius + annotation.lineWidth / 2
+        default:
+            return annotation.boundingRect.insetBy(dx: -radius, dy: -radius).contains(point)
+        }
+    }
+
+    private func splitPoints(_ points: [CGPoint], erasingAt center: CGPoint, radius: CGFloat)
+        -> [[CGPoint]]
+    {
+        var runs: [[CGPoint]] = []
+        var current: [CGPoint] = []
+        for point in points {
+            if distance(point, center) <= radius {
+                if current.count > 1 { runs.append(current) }
+                current = []
+            } else {
+                current.append(point)
+            }
+        }
+        if current.count > 1 { runs.append(current) }
+        return runs
     }
 
     private func commitText() {
@@ -324,31 +463,26 @@ struct AnnotationCanvasView: View {
     private func previewAnnotation() -> Annotation? {
         guard let start = dragStart else { return nil }
         switch selectedTool {
-        case .freehand:
+        case .freehand, .highlighter, .blur:
             guard freehandPoints.count > 1 else { return nil }
             return Annotation(
-                shape: .freehand(points: freehandPoints), color: selectedColor, lineWidth: lineWidth
-            )
-        case .text, .step:
+                shape: pathAnnotationShape(for: selectedTool, points: freehandPoints),
+                color: selectedColor, lineWidth: lineWidth)
+        case .text, .step, .eraser:
             return nil
-        case .arrow:
+        case .arrow, .line:
             guard let current = dragCurrent else { return nil }
-            return Annotation(
-                shape: .arrow(start: start, end: current), color: selectedColor,
-                lineWidth: lineWidth)
-        case .rectangle, .highlighter, .blur:
-            guard let current = dragCurrent else { return nil }
-            let rect = rect(from: start, to: current)
             let shape: Annotation.Shape =
-                selectedTool == .rectangle
-                ? .rectangle(rect: rect)
-                : (selectedTool == .highlighter ? .highlighter(rect: rect) : .blur(rect: rect))
+                selectedTool == .arrow
+                ? .arrow(start: start, end: current) : .line(start: start, end: current)
             return Annotation(shape: shape, color: selectedColor, lineWidth: lineWidth)
-        case .ellipse:
+        case .rectangle, .ellipse, .triangle, .star, .roundedRectangle, .speechBubble:
             guard let current = dragCurrent else { return nil }
-            return Annotation(
-                shape: .ellipse(rect: rect(from: start, to: current)), color: selectedColor,
-                lineWidth: lineWidth)
+            guard
+                let shape = rectAnnotationShape(
+                    for: selectedTool, rect: rect(from: start, to: current))
+            else { return nil }
+            return Annotation(shape: shape, color: selectedColor, lineWidth: lineWidth)
         }
     }
 
@@ -388,6 +522,12 @@ struct AnnotationCanvasView: View {
                     y: p2.y - headLength * sin(angle + headAngle)))
             context.stroke(path, with: .color(annotation.color), style: strokeStyle)
 
+        case .line(let start, let end):
+            var path = Path()
+            path.move(to: CGPoint(x: start.x * scale, y: start.y * scale))
+            path.addLine(to: CGPoint(x: end.x * scale, y: end.y * scale))
+            context.stroke(path, with: .color(annotation.color), style: strokeStyle)
+
         case .rectangle(let rect):
             context.stroke(
                 Path(scaledRect(rect, scale: scale)), with: .color(annotation.color),
@@ -397,6 +537,36 @@ struct AnnotationCanvasView: View {
             context.stroke(
                 Path(ellipseIn: scaledRect(rect, scale: scale)), with: .color(annotation.color),
                 style: strokeStyle)
+
+        case .triangle(let rect):
+            var path = Path()
+            path.addLines(Annotation.trianglePoints(in: rect).map { $0.scaled(by: scale) })
+            path.closeSubpath()
+            context.stroke(path, with: .color(annotation.color), style: strokeStyle)
+
+        case .star(let rect):
+            var path = Path()
+            path.addLines(Annotation.starPoints(in: rect).map { $0.scaled(by: scale) })
+            path.closeSubpath()
+            context.stroke(path, with: .color(annotation.color), style: strokeStyle)
+
+        case .roundedRectangle(let rect):
+            let cornerRadius = Annotation.roundedRectCornerRadius(for: rect) * scale
+            context.stroke(
+                Path(roundedRect: scaledRect(rect, scale: scale), cornerRadius: cornerRadius),
+                with: .color(annotation.color), style: strokeStyle)
+
+        case .speechBubble(let rect):
+            let bodyRect = Annotation.speechBubbleBodyRect(for: rect)
+            let cornerRadius = Annotation.roundedRectCornerRadius(for: bodyRect) * scale
+            context.stroke(
+                Path(roundedRect: scaledRect(bodyRect, scale: scale), cornerRadius: cornerRadius),
+                with: .color(annotation.color), style: strokeStyle)
+            var tailPath = Path()
+            tailPath.addLines(
+                Annotation.speechBubbleTailPoints(in: rect).map { $0.scaled(by: scale) })
+            tailPath.closeSubpath()
+            context.stroke(tailPath, with: .color(annotation.color), style: strokeStyle)
 
         case .freehand(let points):
             guard points.count > 1 else { return }
@@ -428,14 +598,38 @@ struct AnnotationCanvasView: View {
                     .foregroundColor(.white))
             context.draw(resolved, at: center, anchor: .center)
 
-        case .highlighter(let rect):
-            context.fill(
-                Path(scaledRect(rect, scale: scale)), with: .color(annotation.color.opacity(0.4)))
+        case .highlighter(let points):
+            guard points.count > 1 else { return }
+            var path = Path()
+            path.move(to: points[0].scaled(by: scale))
+            for point in points.dropFirst() {
+                path.addLine(to: point.scaled(by: scale))
+            }
+            let brushWidth = Annotation.brushLineWidth(for: annotation.lineWidth) * scale
+            context.stroke(
+                path, with: .color(annotation.color.opacity(0.4)),
+                style: StrokeStyle(lineWidth: brushWidth, lineCap: .round, lineJoin: .round))
 
-        case .blur(let rect):
-            let scaled = scaledRect(rect, scale: scale)
-            context.fill(Path(scaled), with: .color(.gray.opacity(0.55)))
-            context.stroke(Path(scaled), with: .color(.white.opacity(0.8)), lineWidth: 1)
+        case .blur(let points):
+            guard points.count > 1 else { return }
+            let padding = Annotation.brushLineWidth(for: annotation.lineWidth) / 2
+            let modelRect = Annotation.enclosingRect(of: points).insetBy(dx: -padding, dy: -padding)
+            guard let blurred = AnnotationImageEffects.blurredImage(from: image, rect: modelRect)
+            else { return }
+
+            var strokePath = Path()
+            strokePath.move(to: points[0].scaled(by: scale))
+            for point in points.dropFirst() {
+                strokePath.addLine(to: point.scaled(by: scale))
+            }
+            let brushWidth = Annotation.brushLineWidth(for: annotation.lineWidth) * scale
+            let thickPath = strokePath.strokedPath(
+                StrokeStyle(lineWidth: brushWidth, lineCap: .round, lineJoin: .round))
+
+            context.drawLayer { layerContext in
+                layerContext.clip(to: thickPath)
+                layerContext.draw(Image(nsImage: blurred), in: scaledRect(modelRect, scale: scale))
+            }
         }
     }
 
@@ -446,6 +640,16 @@ struct AnnotationCanvasView: View {
         context.stroke(
             Path(roundedRect: scaledRect, cornerRadius: 3),
             with: .color(.accentColor),
+            style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+    }
+
+    private func drawEraserCursor(at point: CGPoint, in context: GraphicsContext, scale: CGFloat) {
+        let radius = eraserRadius * scale
+        let center = point.scaled(by: scale)
+        let circleRect = CGRect(
+            x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        context.stroke(
+            Path(ellipseIn: circleRect), with: .color(.accentColor),
             style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
     }
 

@@ -21,6 +21,7 @@ final class CaptureCoordinator: ObservableObject {
     private func runCapture(_ mode: ScreenCaptureMode, forceEditor: Bool) {
         guard ScreenCaptureService.ensurePermission() else {
             DebugLog.log("Screen Recording permission not granted, aborting capture")
+            PermissionWarnings.showScreenRecordingDenied()
             return
         }
         let url = CaptureOutput.newFileURL(label: "Screenshot")
@@ -33,10 +34,12 @@ final class CaptureCoordinator: ObservableObject {
                 if forceEditor || AnnotationSettings.openEditorAfterCapture {
                     AnnotationEditorWindowController.shared.show(fileURL: savedURL) { finalURL in
                         guard let finalURL else { return }
-                        try? CaptureOutput.finalize(fileURL: finalURL)
+                        Task {
+                            try? await CaptureOutput.finalize(fileURL: finalURL, showPreview: false)
+                        }
                     }
                 } else {
-                    try CaptureOutput.finalize(fileURL: savedURL)
+                    try await CaptureOutput.finalize(fileURL: savedURL)
                 }
             } catch {
                 DebugLog.log("capture failed: \(error)")

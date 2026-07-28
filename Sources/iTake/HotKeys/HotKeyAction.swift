@@ -6,6 +6,8 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
     case captureFullScreen
     case captureWindow
     case captureText
+    case captureTextTranslate
+    case pinRegion
     case toggleRecording
 
     var id: String { rawValue }
@@ -17,6 +19,8 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
         case .captureFullScreen: return "Capture Full Screen"
         case .captureWindow: return "Capture Window"
         case .captureText: return "Capture Text"
+        case .captureTextTranslate: return "Capture Text (Translate)"
+        case .pinRegion: return "Pin Region"
         case .toggleRecording: return "Toggle Recording"
         }
     }
@@ -28,6 +32,8 @@ enum HotKeyAction: String, CaseIterable, Identifiable {
         case .captureFullScreen: return UInt32(kVK_ANSI_3)
         case .captureWindow: return UInt32(kVK_ANSI_4)
         case .captureText: return UInt32(kVK_ANSI_5)
+        case .captureTextTranslate: return UInt32(kVK_ANSI_6)
+        case .pinRegion: return UInt32(kVK_ANSI_7)
         case .toggleRecording: return UInt32(kVK_ANSI_R)
         }
     }

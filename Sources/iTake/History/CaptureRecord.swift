@@ -7,7 +7,7 @@ struct CaptureRecord: Codable, Identifiable, Equatable {
     }
 
     let id: UUID
-    let fileURL: URL
+    var fileURL: URL
     let thumbnailFileName: String
     let kind: Kind
     let createdAt: Date

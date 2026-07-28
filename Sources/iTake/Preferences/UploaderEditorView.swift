@@ -206,7 +206,9 @@ struct UploaderEditorView: View {
             headers[key] = pair.value
             headerKeys.append(key)
         }
-        KeychainHelper.setHeaders(headers, destinationID: id)
+        if !KeychainHelper.setHeaders(headers, destinationID: id) {
+            PermissionWarnings.showKeychainWriteFailed()
+        }
 
         var formData: [String: String] = [:]
         for pair in fieldPairs {

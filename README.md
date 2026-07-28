@@ -5,7 +5,8 @@ A native macOS menu bar app for screenshots, screen recording, OCR, annotation, 
 - Capture a region, window, or the full screen
 - Mark up with arrows, shapes, text, and blur
 - Record your screen with system audio
-- Pull text off anything on-screen with OCR
+- Pull text off anything on-screen with OCR, with optional translation
+- Pin captures to your screen as floating, draggable, click-through overlays
 - Save, copy, or upload text and media to a HTTP endpoint of your choosing, with no Dock icon or third-party frameworks, using `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, `Vision`, and `CoreImage`.
 
 ## Showcase
@@ -26,17 +27,18 @@ A native macOS menu bar app for screenshots, screen recording, OCR, annotation, 
 ## Features
 
 - **Screenshots**: region, window, or full screen, via the native `screencapture` picker.
-- **Annotation editor**: opens after capture (optional): arrows, shapes, freehand, text, numbered step badges, highlighter, and blur. Every placed item is selectable, draggable, and deletable, with undo/redo and custom colors.
+- **Annotation editor**: opens after capture (optional). Arrow, line, rectangle, ellipse, triangle, star, rounded rectangle, speech bubble, freehand pen, eraser, text, numbered step badges, highlighter, and blur. Highlighter and blur are brush tools you paint on freely and the eraser. Every placed item is selectable, draggable, and deletable, with undo/redo, custom colors, and zoom for precise editing.
 - **Screen recording**: region, window, or full display, with pause/resume (paused spans are cut, not frozen) and optional system audio.
-- **OCR ("Capture Text")**: selct a region to capture its text and copy it to your clipboard.
+- **OCR ("Capture Text")**: select a region to capture its text and copy it to your clipboard, or use "Capture Text (Translate)" to see the recognized text and its translation side by side.
+- **Pin to Screen**: pin a region so it floats on top of everything, on every Space — draggable, stackable, and switchable to click-through (with a fade so you can tell it's there) when it's in your way.
 - **Recent Captures**: thumbnail history with copy/upload/reveal/delete and a full browsable window.
-- **Configurable uploader**: one or more HTTP destinations, built and edited right in Preferences or via your own `.itup` config file. Upload progress and confirmations show as small floating overlays.
+- **Configurable uploader**: one or more HTTP destinations, built and edited right in Preferences or via your own `.itup` config file. Upload progress and confirmations show as small floating overlays, and a failed upload offers to save the capture to disk instead of losing it.
 - **Customizable global hotkeys**: with an option to take over macOS's own `⌘⇧3`/`⌘⇧4`/`⌘⇧5` screenshot shortcuts.
 - **Menu bar only**: no Dock icon or main window, with a choice of menu bar icons.
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 15 (Sequoia) or later
 - To build: Xcode Command Line Tools (`swiftc`, `codesign`). A full Xcode install isn't required, this is a plain Swift Package.
 
 ## Installing
@@ -77,6 +79,8 @@ Customizable in **Preferences → Shortcuts**:
 | Capture Full Screen     | `⌃⌘⇧3`  |
 | Capture Window          | `⌃⌘⇧4`  |
 | Capture Text (OCR)      | `⌃⌘⇧5`  |
+| Capture Text (Translate)| `⌃⌘⇧6`  |
+| Pin Region              | `⌃⌘⇧7`  |
 | Toggle Recording        | `⌃⌘⇧R`  |
 
 "Capture Region (Edit)" always opens the annotation editor regardless of the "Open Editor After Capture" setting. The "Use macOS Default Shortcuts" toggle switches to `⌘⇧3`/`⌘⇧4`/`⌘⇧5` and disables the built-in Screenshot app' response to those keys.
@@ -111,7 +115,7 @@ JSON, double-click to import):
 | Uploader secrets                       | macOS Keychain                          |
 
 ## Credits
-- Neocat & Neofox snuggle emote by [Volpeon](https://volpeon.ink/) used as the (temp) app icon
+- Neocat & Neofox snuggle emote by [Volpeon](https://volpeon.ink/) used as the app icon.
 
 ## License
 [GPL-3.0](/LICENSE)

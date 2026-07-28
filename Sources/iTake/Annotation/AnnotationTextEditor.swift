@@ -90,7 +90,8 @@ final class AnnotationTextEditingView: NSView {
             textView.textColor = newValue
             if let newValue, let textStorage = textView.textStorage, textStorage.length > 0 {
                 textStorage.addAttribute(
-                    .foregroundColor, value: newValue, range: NSRange(location: 0, length: textStorage.length))
+                    .foregroundColor, value: newValue,
+                    range: NSRange(location: 0, length: textStorage.length))
             }
         }
     }
