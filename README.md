@@ -5,7 +5,7 @@ A native macOS menu bar app for screenshots, screen recording, OCR, annotation a
 - Capture a region, window or the full screen
 - Mark up with arrows, shapes, text and blur
 - Record your screen with system audio
-- Pull text off anything on-screen using OCR
+- Pull text off anything on-screen using OCR (+ translating)
 - Pin captures to your screen
 - Save, copy or upload text and media to a HTTP endpoint, with no Dock icon or third-party frameworks, using `AppKit`/`SwiftUI`, `ScreenCaptureKit`, `AVFoundation`, `Vision`, and `CoreImage`.
 
